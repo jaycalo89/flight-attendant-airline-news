@@ -1,0 +1,587 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Flight Attendant &amp; Airline News</title>
+<style>
+  :root {
+    --bg: #E9EBE7;
+    --surface: #FFFFFF;
+    --ink: #1C1E1F;
+    --muted: #5B6168;
+    --border: #D8DBD5;
+    --beacon: #C97A1E;
+    --taxiway: #256B78;
+    --focus: #C97A1E;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #101215;
+      --surface: #1B1E22;
+      --ink: #ECE7DC;
+      --muted: #9CA2A6;
+      --border: #2C3034;
+      --beacon: #F2A93C;
+      --taxiway: #5FB8C9;
+      --focus: #F2A93C;
+    }
+  }
+
+  :root[data-theme="light"] {
+    --bg: #E9EBE7;
+    --surface: #FFFFFF;
+    --ink: #1C1E1F;
+    --muted: #5B6168;
+    --border: #D8DBD5;
+    --beacon: #C97A1E;
+    --taxiway: #256B78;
+    --focus: #C97A1E;
+  }
+
+  :root[data-theme="dark"] {
+    --bg: #101215;
+    --surface: #1B1E22;
+    --ink: #ECE7DC;
+    --muted: #9CA2A6;
+    --border: #2C3034;
+    --beacon: #F2A93C;
+    --taxiway: #5FB8C9;
+    --focus: #F2A93C;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  a { color: inherit; }
+  a:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  /* ---- Masthead: a lit departures board, deliberately fixed-dark
+     regardless of page theme, like real airport signage. ---- */
+  header.board {
+    background: #101215;
+    background-image:
+      repeating-linear-gradient(180deg, rgba(255,255,255,0.025) 0px, rgba(255,255,255,0.025) 1px, transparent 1px, transparent 3px);
+    color: #ECE7DC;
+    border-bottom: 3px solid #F2A93C;
+    padding: 2.25rem 1.5rem 1.5rem;
+  }
+
+  .board-inner {
+    max-width: 960px;
+    margin: 0 auto;
+  }
+
+  .board-title-row {
+    display: flex;
+    align-items: baseline;
+    gap: 0.85rem;
+    flex-wrap: wrap;
+  }
+
+  .board-tag {
+    font-family: ui-monospace, "SFMono-Regular", "IBM Plex Mono", Menlo, Consolas, monospace;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    color: #101215;
+    background: #F2A93C;
+    padding: 0.2rem 0.5rem;
+  }
+
+  header.board h1 {
+    font-family: ui-monospace, "SFMono-Regular", "IBM Plex Mono", Menlo, Consolas, monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.045em;
+    font-size: clamp(1.25rem, 3.4vw, 1.9rem);
+    font-weight: 700;
+    margin: 0;
+    text-wrap: balance;
+    color: #F2A93C;
+    text-shadow: 0 0 18px rgba(242, 169, 60, 0.35);
+  }
+
+  .board-status {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 2rem;
+    margin-top: 1.35rem;
+    font-family: ui-monospace, "SFMono-Regular", "IBM Plex Mono", Menlo, Consolas, monospace;
+    font-variant-numeric: tabular-nums;
+    font-size: 0.8rem;
+  }
+
+  .status-item { display: flex; flex-direction: column; gap: 0.2rem; }
+
+  .status-label {
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-size: 0.65rem;
+    color: #8A8F86;
+  }
+
+  .status-value { color: #ECE7DC; }
+
+  /* ---- Manifest ---- */
+  main {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem 4rem;
+  }
+
+  .manifest {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .ticket {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    display: grid;
+    grid-template-columns: 128px 1px 1fr;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .ticket:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 24px rgba(16, 18, 21, 0.12);
+    }
+  }
+
+  .ticket-meta {
+    padding: 1.1rem 0.9rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    font-family: ui-monospace, "SFMono-Regular", "IBM Plex Mono", Menlo, Consolas, monospace;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .ticket-no {
+    font-size: 0.75rem;
+    color: var(--muted);
+    letter-spacing: 0.05em;
+  }
+
+  .ticket-time {
+    font-size: 0.82rem;
+    color: var(--ink);
+  }
+
+  .ticket-gate {
+    align-self: flex-start;
+    font-size: 0.68rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--taxiway);
+    border: 1px solid var(--taxiway);
+    padding: 0.15rem 0.4rem;
+  }
+
+  /* Perforation: dashed tear-line with punched notches top & bottom */
+  .ticket-perf {
+    position: relative;
+    border-left: 2px dashed var(--border);
+  }
+
+  .ticket-perf::before,
+  .ticket-perf::after {
+    content: "";
+    position: absolute;
+    left: -7px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+  }
+
+  .ticket-perf::before { top: -8px; }
+  .ticket-perf::after { bottom: -8px; }
+
+  .ticket-content {
+    padding: 1.1rem 1.35rem;
+  }
+
+  .ticket-content h2 {
+    font-family: Georgia, "Iowan Old Style", "Palatino Linotype", "Times New Roman", serif;
+    font-size: 1.15rem;
+    font-weight: 700;
+    line-height: 1.38;
+    margin: 0 0 0.55rem;
+    text-wrap: balance;
+  }
+
+  .ticket-content h2 a {
+    text-decoration: none;
+  }
+
+  .ticket-content h2 a:hover {
+    color: var(--beacon);
+  }
+
+  .ticket-content p {
+    font-size: 0.92rem;
+    line-height: 1.62;
+    color: var(--muted);
+    margin: 0 0 0.85rem;
+    max-width: 62ch;
+  }
+
+  .ticket-link {
+    display: inline-block;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--beacon);
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+  }
+
+  .ticket-link:hover {
+    border-bottom-color: var(--beacon);
+  }
+
+  @media (max-width: 620px) {
+    .ticket {
+      grid-template-columns: 1fr;
+      grid-template-rows: auto 1px auto;
+    }
+
+    .ticket-meta {
+      flex-direction: row;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .ticket-perf {
+      border-left: none;
+      border-top: 2px dashed var(--border);
+    }
+
+    .ticket-perf::before,
+    .ticket-perf::after {
+      left: auto;
+      top: -7px;
+    }
+
+    .ticket-perf::before { left: -8px; }
+    .ticket-perf::after { right: -8px; left: auto; }
+  }
+
+  footer.page-footer {
+    text-align: center;
+    color: var(--muted);
+    font-family: ui-monospace, "SFMono-Regular", "IBM Plex Mono", Menlo, Consolas, monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.04em;
+    padding: 0.5rem 1.5rem 2.5rem;
+  }
+</style>
+</head>
+<body>
+  <header class="board">
+    <div class="board-inner">
+      <div class="board-title-row">
+        <span class="board-tag">DEP</span>
+        <h1>Flight Attendant &amp; Airline News</h1>
+      </div>
+      <div class="board-status">
+        <div class="status-item">
+          <span class="status-label">Fetched</span>
+          <span class="status-value">2026-07-12 19:11:18</span>
+        </div>
+        <div class="status-item">
+          <span class="status-label">Query</span>
+          <span class="status-value">&quot;flight attendant&quot; OR &quot;flight attendants&quot; OR airline</span>
+        </div>
+        <div class="status-item">
+          <span class="status-label">Results</span>
+          <span class="status-value">698</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div class="manifest">
+      <article class="ticket">
+        <div class="ticket-meta">
+          <span class="ticket-no">01</span>
+          <span class="ticket-time">11 JUL · 22:00Z</span>
+          <span class="ticket-gate">Izismile.com</span>
+        </div>
+        <div class="ticket-perf" aria-hidden="true"></div>
+        <div class="ticket-content">
+          <h2><a href="https://izismile.com/2026/07/12/airline_workers_reveal_their_industry_secrets_15_gifs.html" target="_blank" rel="noopener noreferrer">Airline Workers Reveal Their Industry Secrets (15 GIFS)</a></h2>
+          <p>Airline Workers Reveal Their Industry Secrets (15 GIFS)</p>
+          <a class="ticket-link" href="https://izismile.com/2026/07/12/airline_workers_reveal_their_industry_secrets_15_gifs.html" target="_blank" rel="noopener noreferrer">Read article <span aria-hidden="true">&#8594;</span></a>
+        </div>
+      </article>
+      <article class="ticket">
+        <div class="ticket-meta">
+          <span class="ticket-no">02</span>
+          <span class="ticket-time">11 JUL · 20:42Z</span>
+          <span class="ticket-gate">Fox News</span>
+        </div>
+        <div class="ticket-perf" aria-hidden="true"></div>
+        <div class="ticket-content">
+          <h2><a href="https://www.foxnews.com/world/beloved-musicians-victims-deadly-bahamas-plane-crash-aviation-authority-grounds-flights" target="_blank" rel="noopener noreferrer">Beloved musicians among victims in deadly Bahamas plane crash; aviation authority grounds flights</a></h2>
+          <p>Video shows the aftermath of a Cessna 402 crash in North Andros that killed 10 people, including members of a popular Bahamian band and a DJ.</p>
+          <a class="ticket-link" href="https://www.foxnews.com/world/beloved-musicians-victims-deadly-bahamas-plane-crash-aviation-authority-grounds-flights" target="_blank" rel="noopener noreferrer">Read article <span aria-hidden="true">&#8594;</span></a>
+        </div>
+      </article>
+      <article class="ticket">
+        <div class="ticket-meta">
+          <span class="ticket-no">03</span>
+          <span class="ticket-time">11 JUL · 20:10Z</span>
+          <span class="ticket-gate">Us Weekly</span>
+        </div>
+        <div class="ticket-perf" aria-hidden="true"></div>
+        <div class="ticket-content">
+          <h2><a href="https://www.usmagazine.com/celebrity-news/news/peter-webers-mom-reacts-to-bachelor-producers-claims/" target="_blank" rel="noopener noreferrer">Peter Weber&#x27;s Mom Reacts to Former ‘Bachelor’ Producer&#x27;s Fling Claims</a></h2>
+          <p>Former Bachelor Peter Weber’s mom, Barbara Weber, is seemingly weighing in after her son was name-dropped in former franchise producer Julie LaPlaca’s tell-all memoir. “Lift the NDAs,” Barbara wrote via Instagram on Saturday, July 11, alongside a photo of Pet…</p>
+          <a class="ticket-link" href="https://www.usmagazine.com/celebrity-news/news/peter-webers-mom-reacts-to-bachelor-producers-claims/" target="_blank" rel="noopener noreferrer">Read article <span aria-hidden="true">&#8594;</span></a>
+        </div>
+      </article>
+      <article class="ticket">
+        <div class="ticket-meta">
+          <span class="ticket-no">04</span>
+          <span class="ticket-time">11 JUL · 20:04Z</span>
+          <span class="ticket-gate">allears.net</span>
+        </div>
+        <div class="ticket-perf" aria-hidden="true"></div>
+        <div class="ticket-content">
+          <h2><a href="https://allears.net/2026/07/11/delta-just-made-major-changes-to-its-seating/" target="_blank" rel="noopener noreferrer">Delta Just Made MAJOR Changes To Its Seating</a></h2>
+          <p>Delta Airlines is now offering a new tier of seating called Basic Business, and here is everything you need to know!</p>
+          <a class="ticket-link" href="https://allears.net/2026/07/11/delta-just-made-major-changes-to-its-seating/" target="_blank" rel="noopener noreferrer">Read article <span aria-hidden="true">&#8594;</span></a>
+        </div>
+      </article>
+      <article class="ticket">
+        <div class="ticket-meta">
+          <span class="ticket-no">05</span>
+          <span class="ticket-time">11 JUL · 20:03Z</span>
+          <span class="ticket-gate">Biztoc.com</span>
+        </div>
+        <div class="ticket-perf" aria-hidden="true"></div>
+        <div class="ticket-content">
+          <h2><a href="https://biztoc.com/x/8e9d87244f0e9814" target="_blank" rel="noopener noreferrer">These 13 airlines offer &#x27;basic&#x27; business-class seats for less than the cost of classic fares</a></h2>
+          <p>A new trend is emerging in the US airline market that promises to make premium travel more affordable: &quot;basic&quot; business class. These unbundled fares retain the core on-board business-class experience while stripping away traditional amenities to lower the upf…</p>
+          <a class="ticket-link" href="https://biztoc.com/x/8e9d87244f0e9814" target="_blank" rel="noopener noreferrer">Read article <span aria-hidden="true">&#8594;</span></a>
+        </div>
+      </article>
+      <article class="ticket">
+        <div class="ticket-meta">
+          <span class="ticket-no">06</span>
+          <span class="ticket-time">11 JUL · 19:11Z</span>
+          <span class="ticket-gate">Business Insider</span>
+        </div>
+        <div class="ticket-perf" aria-hidden="true"></div>
+        <div class="ticket-content">
+          <h2><a href="https://www.businessinsider.com/england-norway-world-cup-bet-british-airways-norwegian-air-shuttle-2026-7#article" target="_blank" rel="noopener noreferrer">The high-flying England vs. Norway World Cup bet that&#x27;s got everyone talking</a></h2>
+          <p>Norwegian Air Shuttle made a cheeky bet with British Airways on Instagram ahead of England and Norway&#x27;s match on Saturday.</p>
+          <a class="ticket-link" href="https://www.businessinsider.com/england-norway-world-cup-bet-british-airways-norwegian-air-shuttle-2026-7#article" target="_blank" rel="noopener noreferrer">Read article <span aria-hidden="true">&#8594;</span></a>
+        </div>
+      </article>
+      <article class="ticket">
+        <div class="ticket-meta">
+          <span class="ticket-no">07</span>
+          <span class="ticket-time">11 JUL · 18:46Z</span>
+          <span class="ticket-gate">Al Jazeera English</span>
+        </div>
+        <div class="ticket-perf" aria-hidden="true"></div>
+        <div class="ticket-content">
+          <h2><a href="https://www.aljazeera.com/news/2026/7/11/trump-administration-subpoenas-new-york-times-reporters-over-coverage" target="_blank" rel="noopener noreferrer">Trump administration subpoenas New York Times reporters over coverage</a></h2>
+          <p>Press freedom advocates and members of Congress have condemned the subpoenas as an attempt to &#x27;threaten and intimidate&#x27;.</p>
+          <a class="ticket-link" href="https://www.aljazeera.com/news/2026/7/11/trump-administration-subpoenas-new-york-times-reporters-over-coverage" target="_blank" rel="noopener noreferrer">Read article <span aria-hidden="true">&#8594;</span></a>
+        </div>
+      </article>
+      <article class="ticket">
+        <div class="ticket-meta">
+          <span class="ticket-no">08</span>
+          <span class="ticket-time">11 JUL · 18:31Z</span>
+          <span class="ticket-gate">2paxfly.com</span>
+        </div>
+        <div class="ticket-perf" aria-hidden="true"></div>
+        <div class="ticket-content">
+          <h2><a href="https://www.2paxfly.com/2026/07/12/weekly-review-sunday-12-july-2026/" target="_blank" rel="noopener noreferrer">WEEKLY REVIEW: Sunday 12 July, 2026</a></h2>
+          <p>Hello travellers, Well, the dust has largely settled on our renovations, but as always, there is a bit here and a bit there still to do. We are back in our regular bedroom with its new floor, and using our repaired and renewed bathroom. All of that confirms w…</p>
+          <a class="ticket-link" href="https://www.2paxfly.com/2026/07/12/weekly-review-sunday-12-july-2026/" target="_blank" rel="noopener noreferrer">Read article <span aria-hidden="true">&#8594;</span></a>
+        </div>
+      </article>
+      <article class="ticket">
+        <div class="ticket-meta">
+          <span class="ticket-no">09</span>
+          <span class="ticket-time">11 JUL · 17:57Z</span>
+          <span class="ticket-gate">Dailymail.com</span>
+        </div>
+        <div class="ticket-perf" aria-hidden="true"></div>
+        <div class="ticket-content">
+          <h2><a href="https://www.dailymail.com/sciencetech/article-15957511/affair-exposed-technology.html" target="_blank" rel="noopener noreferrer">The day every affair will be exposed: Even infidelities from decades ago will be outed... experts reveal what cheaters must do immediately</a></h2>
+          <p>Cheating partners will soon have nowhere to hide. A tech expert reveal the date, within the next 12 months, when it will all be outed...</p>
+          <a class="ticket-link" href="https://www.dailymail.com/sciencetech/article-15957511/affair-exposed-technology.html" target="_blank" rel="noopener noreferrer">Read article <span aria-hidden="true">&#8594;</span></a>
+        </div>
+      </article>
+      <article class="ticket">
+        <div class="ticket-meta">
+          <span class="ticket-no">10</span>
+          <span class="ticket-time">11 JUL · 17:33Z</span>
+          <span class="ticket-gate">RTE</span>
+        </div>
+        <div class="ticket-perf" aria-hidden="true"></div>
+        <div class="ticket-content">
+          <h2><a href="https://www.rte.ie/news/world/2026/0711/1582904-ryanair-greece/" target="_blank" rel="noopener noreferrer">Eyewitness photo shows broken window inside Ryanair plane</a></h2>
+          <p>A passenger was partially sucked through a dislodged window on a Ryanair Boeing 737 flight shortly after takeoff in Greece yesterday, two airport sources said, forcing an emergency landing.</p>
+          <a class="ticket-link" href="https://www.rte.ie/news/world/2026/0711/1582904-ryanair-greece/" target="_blank" rel="noopener noreferrer">Read article <span aria-hidden="true">&#8594;</span></a>
+        </div>
+      </article>
+      <article class="ticket">
+        <div class="ticket-meta">
+          <span class="ticket-no">11</span>
+          <span class="ticket-time">11 JUL · 16:08Z</span>
+          <span class="ticket-gate">Dailymail.com</span>
+        </div>
+        <div class="ticket-perf" aria-hidden="true"></div>
+        <div class="ticket-content">
+          <h2><a href="https://www.dailymail.com/news/article-15970235/Bahamas-plane-crash-victims-band-Da-Pond-Band.html" target="_blank" rel="noopener noreferrer">Half of ten victims in Bahamas plane crash identified as members of popular Da Pond Band</a></h2>
+          <p>Members of &#x27;Da Pond Band&#x27; were identified on social media and in a flight manifest as being aboard the Flamingo Air flight when it crashed in North Andros on Friday.</p>
+          <a class="ticket-link" href="https://www.dailymail.com/news/article-15970235/Bahamas-plane-crash-victims-band-Da-Pond-Band.html" target="_blank" rel="noopener noreferrer">Read article <span aria-hidden="true">&#8594;</span></a>
+        </div>
+      </article>
+      <article class="ticket">
+        <div class="ticket-meta">
+          <span class="ticket-no">12</span>
+          <span class="ticket-time">11 JUL · 15:57Z</span>
+          <span class="ticket-gate">Forbes</span>
+        </div>
+        <div class="ticket-perf" aria-hidden="true"></div>
+        <div class="ticket-content">
+          <h2><a href="https://www.forbes.com/sites/tedreed/2026/07/11/world-cup-boosts-american-delta-and-united-now-and-maybe-later-too/" target="_blank" rel="noopener noreferrer">World Cup Boosts American, Delta And United, Now And Maybe Later Too</a></h2>
+          <p>Not only are the global U.S. airlines seeing World Cup traffic gains, but also Delta&#x27;s CEO says &quot;You couldn&#x27;t have asked for a better advertisement to come&quot; to the U.S.</p>
+          <a class="ticket-link" href="https://www.forbes.com/sites/tedreed/2026/07/11/world-cup-boosts-american-delta-and-united-now-and-maybe-later-too/" target="_blank" rel="noopener noreferrer">Read article <span aria-hidden="true">&#8594;</span></a>
+        </div>
+      </article>
+      <article class="ticket">
+        <div class="ticket-meta">
+          <span class="ticket-no">13</span>
+          <span class="ticket-time">11 JUL · 15:40Z</span>
+          <span class="ticket-gate">BusinessLine</span>
+        </div>
+        <div class="ticket-perf" aria-hidden="true"></div>
+        <div class="ticket-content">
+          <h2><a href="https://www.thehindubusinessline.com/economy/logistics/emirates-is-ready-to-introduce-its-airbus-a380-services-to-hyderabad/article71211088.ece" target="_blank" rel="noopener noreferrer">Emirates is ready to introduce its Airbus A380 services to Hyderabad</a></h2>
+          <p>The CM also invited Emirates to establish Maintenance, Repair and Overhaul (MRO) facilities at the proposed airports in Warangal and Adilabad, positioning Telangana as an emerging aviation hub</p>
+          <a class="ticket-link" href="https://www.thehindubusinessline.com/economy/logistics/emirates-is-ready-to-introduce-its-airbus-a380-services-to-hyderabad/article71211088.ece" target="_blank" rel="noopener noreferrer">Read article <span aria-hidden="true">&#8594;</span></a>
+        </div>
+      </article>
+      <article class="ticket">
+        <div class="ticket-meta">
+          <span class="ticket-no">14</span>
+          <span class="ticket-time">11 JUL · 15:32Z</span>
+          <span class="ticket-gate">Biztoc.com</span>
+        </div>
+        <div class="ticket-perf" aria-hidden="true"></div>
+        <div class="ticket-content">
+          <h2><a href="https://biztoc.com/x/b90ea22bc3cb6c7e" target="_blank" rel="noopener noreferrer">Airline shut down, loses license after accident kills 10 people</a></h2>
+          <p>The Air Operator&#x27;s Certificate, a license that is granted by the government agency regulating aviation in a given country, is the single most critical license that an airline needs to run commercial flights. It is issued once a new carrier proves that it has …</p>
+          <a class="ticket-link" href="https://biztoc.com/x/b90ea22bc3cb6c7e" target="_blank" rel="noopener noreferrer">Read article <span aria-hidden="true">&#8594;</span></a>
+        </div>
+      </article>
+      <article class="ticket">
+        <div class="ticket-meta">
+          <span class="ticket-no">15</span>
+          <span class="ticket-time">11 JUL · 14:27Z</span>
+          <span class="ticket-gate">Reason</span>
+        </div>
+        <div class="ticket-perf" aria-hidden="true"></div>
+        <div class="ticket-content">
+          <h2><a href="https://reason.com/volokh/2026/07/11/florida-politician-anthony-f-sabatini-faulted-for-ai-hallucinations-in-briefs/" target="_blank" rel="noopener noreferrer">[Eugene Volokh] Florida Politician (Anthony F. Sabatini) Faulted for AI Hallucinations in Briefs</a></h2>
+          <p>&quot;It is rare to see the kind of blatant and repeated misconduct that Sabatini [acting as plaintifs&#x27; lawyer] has committed in this case.&quot;</p>
+          <a class="ticket-link" href="https://reason.com/volokh/2026/07/11/florida-politician-anthony-f-sabatini-faulted-for-ai-hallucinations-in-briefs/" target="_blank" rel="noopener noreferrer">Read article <span aria-hidden="true">&#8594;</span></a>
+        </div>
+      </article>
+      <article class="ticket">
+        <div class="ticket-meta">
+          <span class="ticket-no">16</span>
+          <span class="ticket-time">11 JUL · 14:21Z</span>
+          <span class="ticket-gate">Fortune</span>
+        </div>
+        <div class="ticket-perf" aria-hidden="true"></div>
+        <div class="ticket-content">
+          <h2><a href="https://fortune.com/2026/07/11/man-sucked-broken-window-ryanair-flight-greece-takeoff/" target="_blank" rel="noopener noreferrer">A man was partly sucked out of a broken window on a Ryanair plane shortly after takeoff, but fellow passengers pulled him back</a></h2>
+          <p>The 61-year-old passenger, who was not identified by name, suffered neck and shoulder injuries and friction burns, according to a Greek hospital official.</p>
+          <a class="ticket-link" href="https://fortune.com/2026/07/11/man-sucked-broken-window-ryanair-flight-greece-takeoff/" target="_blank" rel="noopener noreferrer">Read article <span aria-hidden="true">&#8594;</span></a>
+        </div>
+      </article>
+      <article class="ticket">
+        <div class="ticket-meta">
+          <span class="ticket-no">17</span>
+          <span class="ticket-time">11 JUL · 14:04Z</span>
+          <span class="ticket-gate">Viewfromthewing.com</span>
+        </div>
+        <div class="ticket-perf" aria-hidden="true"></div>
+        <div class="ticket-content">
+          <h2><a href="https://viewfromthewing.com/delta-cancels-tokyo-flight-after-5½-hours-only-gives-hotels-to-passengers-who-make-babies-right-now/" target="_blank" rel="noopener noreferrer">Delta Cancels Tokyo Flight After 5½ Hours—Only Gives Hotels To Passengers Who ‘Make Babies Right Now’</a></h2>
+          <p>Passengers spent 5½ hours aboard Delta’s Tokyo–Minneapolis flight before a mechanical problem forced an 11 p.m. cancellation. With too few hotel rooms, Delta prioritized travelers with medical concerns and families with babies—prompting passengers to joke, “E…</p>
+          <a class="ticket-link" href="https://viewfromthewing.com/delta-cancels-tokyo-flight-after-5½-hours-only-gives-hotels-to-passengers-who-make-babies-right-now/" target="_blank" rel="noopener noreferrer">Read article <span aria-hidden="true">&#8594;</span></a>
+        </div>
+      </article>
+      <article class="ticket">
+        <div class="ticket-meta">
+          <span class="ticket-no">18</span>
+          <span class="ticket-time">11 JUL · 14:00Z</span>
+          <span class="ticket-gate">CBC News</span>
+        </div>
+        <div class="ticket-perf" aria-hidden="true"></div>
+        <div class="ticket-content">
+          <h2><a href="https://www.cbc.ca/news/canada/british-columbia/explainer-bc-charter-fatal-sinking-near-richmond-9.7266516" target="_blank" rel="noopener noreferrer">What we know about the deadly charter boat sinking off B.C.’s coast</a></h2>
+          <p>Here’s what we know about the deadly charter boat sinking off the shores of Richmond, B.C., the people who were aboard, concerns raised about the vessel and the investigation into the company that operated it.</p>
+          <a class="ticket-link" href="https://www.cbc.ca/news/canada/british-columbia/explainer-bc-charter-fatal-sinking-near-richmond-9.7266516" target="_blank" rel="noopener noreferrer">Read article <span aria-hidden="true">&#8594;</span></a>
+        </div>
+      </article>
+      <article class="ticket">
+        <div class="ticket-meta">
+          <span class="ticket-no">19</span>
+          <span class="ticket-time">11 JUL · 13:14Z</span>
+          <span class="ticket-gate">PCMag.com</span>
+        </div>
+        <div class="ticket-perf" aria-hidden="true"></div>
+        <div class="ticket-content">
+          <h2><a href="https://uk.pcmag.com/news/166114/i-traded-my-commute-for-hundreds-of-miles-of-adventure-my-life-with-starlink" target="_blank" rel="noopener noreferrer">I Traded My Commute for Hundreds of Miles of Adventure: My Life With Starlink</a></h2>
+          <p>Thanks to my tech-outfitted SUV, I have a life and career untethered from a single employer, a static workspace, and a fragile corporate ideal. Here&#x27;s how I do it. Back in 2022, I rode my motorcycle up 13,000 feet to the top of Cinnamon Pass on the spine of t…</p>
+          <a class="ticket-link" href="https://uk.pcmag.com/news/166114/i-traded-my-commute-for-hundreds-of-miles-of-adventure-my-life-with-starlink" target="_blank" rel="noopener noreferrer">Read article <span aria-hidden="true">&#8594;</span></a>
+        </div>
+      </article>
+      <article class="ticket">
+        <div class="ticket-meta">
+          <span class="ticket-no">20</span>
+          <span class="ticket-time">11 JUL · 13:01Z</span>
+          <span class="ticket-gate">Yahoo Entertainment</span>
+        </div>
+        <div class="ticket-perf" aria-hidden="true"></div>
+        <div class="ticket-content">
+          <h2><a href="https://finance.yahoo.com/markets/stocks/articles/money-turning-more-money-sounds-130113921.html" target="_blank" rel="noopener noreferrer">Money Turning Into More Money Sounds Too Good to Be True. Does Building a Large Portfolio Actually Require Less Work Than People Assume?</a></h2>
+          <p>One nonprofit executive who grew up in poverty described a surprising realization after spending hours reading about investing, retirement accounts and other...</p>
+          <a class="ticket-link" href="https://finance.yahoo.com/markets/stocks/articles/money-turning-more-money-sounds-130113921.html" target="_blank" rel="noopener noreferrer">Read article <span aria-hidden="true">&#8594;</span></a>
+        </div>
+      </article>
+    </div>
+  </main>
+
+  <footer class="page-footer">
+    GENERATED FROM FLIGHT_NEWS.TXT &middot; 20 ENTRIES ON MANIFEST
+  </footer>
+</body>
+</html>
